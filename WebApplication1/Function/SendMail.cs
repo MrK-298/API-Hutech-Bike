@@ -10,8 +10,8 @@ namespace WebApplication1.Function
 {
     public class SendMail
     {
-        private static string password = "hutechdriver@gmail.com";
-        private static string Email = "dlpywleqrnjkjdmm";
+        private static string Email = "hutechdriver@gmail.com";
+        private static string password = "dlpywleqrnjkjdmm";
         public static void SendEmail(string to, string subject, string body, string attachFile)
         {
 

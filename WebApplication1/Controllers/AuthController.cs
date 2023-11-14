@@ -1,12 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using WebApplication1.Data;
+using WebApplication1.Data.EF;
 using WebApplication1.Function;
 
 namespace WebApplication1.Controllers
@@ -17,35 +21,49 @@ namespace WebApplication1.Controllers
     {
         private readonly MyDbContext _context;
         private readonly SymmetricSecurityKey _secretKey;
-        public AuthController(MyDbContext context) { 
+        public AuthController(MyDbContext context)
+        {
             _context = context;
             _secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ntqbqhrychczumzisfmojgjtpvpsfgwm"));
         }
         [HttpPost("Login")]
-        public IActionResult Login(LoginViewModel model) 
+        public IActionResult Login(LoginViewModel model)
         {
-            var user = _context.Users.SingleOrDefault(p=>p.userName == model.userName &&p.passWord==model.passWord);
-            if (user!=null)
+            var user = _context.Users.SingleOrDefault(p => p.userName == model.userName);
+            if (user != null)
             {
-                var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.userName),
-                new Claim("Id", user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-            };
+                var passwordHasher = new PasswordHasher<User>();
+                var passwordVerificationResult = passwordHasher.VerifyHashedPassword(user, user.passWord, model.passWord);
+                if (passwordVerificationResult == PasswordVerificationResult.Success)
+                {
+                    var userrole = _context.userRoles.SingleOrDefault(p => p.userId == user.Id);
+                    var role = _context.Roles.SingleOrDefault(p=>p.roleId==userrole.roleId);
+                    var claims = new List<Claim>
+                {
+                    new Claim("Username", user.userName),
+                    new Claim("Id", user.Id.ToString()),
+                    new Claim("Email", user.Email),
+                    new Claim("PhoneNumber", user.phoneNumber ),
+                    new Claim("Role", role.roleName)
+                };
 
 
-                var token = new JwtSecurityToken(
-                    issuer: "https://localhost:7145/swagger",
-                    audience: "api", // Hoặc "api/login" tùy theo cấu hình
-                    claims: claims,
-                    expires: DateTime.UtcNow.AddHours(1),
-                    signingCredentials: new SigningCredentials(_secretKey, SecurityAlgorithms.HmacSha256)
-                );
+                    var token = new JwtSecurityToken(
+                        issuer: "https://localhost:7145/swagger",
+                        audience: "api", // Hoặc "api/login" tùy theo cấu hình
+                        claims: claims,
+                        expires: DateTime.UtcNow.AddHours(1),
+                        signingCredentials: new SigningCredentials(_secretKey, SecurityAlgorithms.HmacSha256)
+                    );
 
-                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+                    var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-                return Ok(new { Token = tokenString, Message = "Login success" }) ;
+                    return Ok(new { Token = tokenString, Message = "Login success" });
+                }
+                else
+                {
+                    return Ok(new { Message = "Login fail ! try again" });
+                }
             }
             else
             {
@@ -60,12 +78,25 @@ namespace WebApplication1.Controllers
                 var user = new User
                 {
                     userName = model.userName,
-                    passWord = model.passWord,                 
-                    Email = model.Email
+                    passWord = new PasswordHasher<User>().HashPassword(null, model.passWord),
+                    Email = model.Email,
+                    phoneNumber = model.phoneNumber
                 };
-                SendMail.SendEmail(user.Email, "Xác nhận tài khoản", "Please confirm your account by <a href=\"\">Xác nhận", "");
+                SendMail.SendEmail(model.Email, "Xác nhận tài khoản", "Bạn đã xác nhận thành công", "");
                 _context.Users.Add(user);
                 _context.SaveChanges();
+                var user1 = _context.Users.SingleOrDefault(u => u.userName == model.userName);
+                var role = _context.Roles.SingleOrDefault(r => r.roleName == "Member");
+                if (user != null && role != null)
+                {
+                    var userRole = new UserRole
+                    {
+                        userId = user1.Id,
+                        roleId = role.roleId
+                    };
+                    _context.userRoles.Add(userRole);
+                    _context.SaveChanges();
+                }
 
                 return Ok("Registration successful");
             }
@@ -88,11 +119,30 @@ namespace WebApplication1.Controllers
             var properties = new AuthenticationProperties { RedirectUri = returnUrl };
             return Challenge(properties, "Facebook");
         }
-        [HttpGet("Test")]
-        public IActionResult Text()
+        [HttpGet("UserInfo")]
+        [Authorize]
+        public IActionResult UserInfo()
         {
-            return Ok();
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "Id");
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            {
+                var user = _context.Users.SingleOrDefault(u => u.Id == userId);
+                if (user != null)
+                {
+                    // Trả về thông tin người dùng dưới dạng JSON
+                    return Ok(new
+                    {
+                        userId = user.Id,
+                        userName = user.userName,
+                        email = user.Email,
+                        phoneNumber = user.phoneNumber,
+                        // Thêm các thông tin khác của người dùng tại đây
+                    });
+                }
+            }
+            return NotFound();
         }
+
     }
 }
 
