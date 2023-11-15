@@ -119,29 +119,6 @@ namespace WebApplication1.Controllers
             var properties = new AuthenticationProperties { RedirectUri = returnUrl };
             return Challenge(properties, "Facebook");
         }
-        [HttpGet("UserInfo")]
-        [Authorize]
-        public IActionResult UserInfo()
-        {
-            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "Id");
-            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
-            {
-                var user = _context.Users.SingleOrDefault(u => u.Id == userId);
-                if (user != null)
-                {
-                    // Trả về thông tin người dùng dưới dạng JSON
-                    return Ok(new
-                    {
-                        userId = user.Id,
-                        userName = user.userName,
-                        email = user.Email,
-                        phoneNumber = user.phoneNumber,
-                        // Thêm các thông tin khác của người dùng tại đây
-                    });
-                }
-            }
-            return NotFound();
-        }
 
     }
 }

@@ -16,15 +16,5 @@ namespace WebApplication1.Data.Model
 
         public decimal? price { get; set; }
 
-        public DateTime? timeBook { get; set; }
-
-        public DateTime? orderDate { get; set; }
-
-        public string status { get; set; }
-
-        public string? DriverId { get; set; }
-
-        public bool? isPaid { get; set; }
-        public string? locationIP { get; set; }
     }
 }
