@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.Text;
 using WebApplication1.Data;
 using WebApplication1.Data.EF;
+using WebApplication1.Data.Model;
 using WebApplication1.Function;
 
 namespace WebApplication1.Controllers
@@ -19,13 +20,17 @@ namespace WebApplication1.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+        private readonly UserRepository _userRepository;
         private readonly MyDbContext _context;
         private readonly SymmetricSecurityKey _secretKey;
-        public AuthController(MyDbContext context)
+
+        public AuthController(MyDbContext context, UserRepository userRepository)
         {
             _context = context;
             _secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ntqbqhrychczumzisfmojgjtpvpsfgwm"));
+            _userRepository = userRepository;
         }
+
         [HttpPost("Login")]
         public IActionResult Login(LoginViewModel model)
         {
@@ -103,22 +108,52 @@ namespace WebApplication1.Controllers
 
             return BadRequest("Username is already taken");
         }
-        [HttpGet("google-login")]
-        public IActionResult GoogleLogin(string returnUrl = "/")
+        [HttpPost("sentCode")]
+        public IActionResult SentVerificationCode(ForgotPasswordViewModel model)
         {
-            var properties = new AuthenticationProperties
+            // Tìm người dùng với địa chỉ email trong cơ sở dữ liệu của bạn
+            var user = _context.Users.SingleOrDefault(p=>p.Email==model.email);
+            if (user == null)
             {
-                RedirectUri = Url.Action("GoogleCallback", "Auth", new { ReturnUrl = returnUrl })
-            };
-            return Challenge(properties, "Google");
+                // Không tìm thấy người dùng với địa chỉ email này
+                return NotFound();
+            }
+
+            // Tạo và lưu mã xác minh trong cơ sở dữ liệu
+            var verificationCode = GenerateVerificationCode.GenerateCode();
+            _userRepository.SaveVerificationCode(user.Id, verificationCode);
+
+            SendMail.SendEmail(model.email, "Mã xác minh", verificationCode, "");
+
+            return Ok(new { VerificationCode = verificationCode });
+        }
+        [HttpPost("resetPassword")]
+        public IActionResult ResetPassword(ResetPasswordViewModel model)
+        {
+            // Tìm người dùng với địa chỉ email trong cơ sở dữ liệu của bạn
+            var user = _userRepository.GetUserByEmail(model.email);
+
+            if (user == null)
+            {
+                // Không tìm thấy người dùng với địa chỉ email này
+                return NotFound();
+            }
+
+            // Kiểm tra mã xác minh từ người dùng
+            if (!_userRepository.VerifyCode(user.Id, model.verificationCode))
+            {
+                // Mã xác minh không hợp lệ
+                return BadRequest("Invalid verification code");
+            }
+
+            // Đổi mật khẩu của người dùng
+            user.passWord = new PasswordHasher<User>().HashPassword(null, model.newPassword);
+            _userRepository.UpdateUser(user);
+
+            // Đổi mật khẩu thành công
+            return Ok();
         }
 
-        [HttpGet("facebook-login")]
-        public IActionResult FacebookLogin(string returnUrl = "/")
-        {
-            var properties = new AuthenticationProperties { RedirectUri = returnUrl };
-            return Challenge(properties, "Facebook");
-        }
 
     }
 }

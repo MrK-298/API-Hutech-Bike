@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using WebApplication1.Data;
+using WebApplication1.Function;
 
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
@@ -13,7 +14,7 @@ builder.Services.AddDbContext<MyDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyDB")));
 
 // Add services to the container.
-
+builder.Services.AddScoped<UserRepository> ();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -38,16 +39,6 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
-})
-.AddGoogle(options =>
-{
-    options.ClientId = configuration["Google:ClientId"];
-    options.ClientSecret = configuration["Google:ClientSecret"];
-})
-.AddFacebook(options =>
-{
-    options.AppId = configuration["Facebook:AppId"];
-    options.AppSecret = configuration["Facebook:AppSecret"];
 });
 
 
