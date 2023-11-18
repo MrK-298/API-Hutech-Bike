@@ -32,7 +32,6 @@ namespace WebApplication1.Data.EF
         public int? Point { get; set; }
         public bool? lockOutEndDateUtc { get; set; }
 
-        public string? VerificationCode { get; set; }
         public ICollection<Trip> Trips { get; set; }
 
     }

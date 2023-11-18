@@ -135,9 +135,6 @@ namespace WebApplication1.Migrations
                     b.Property<int?>("Point")
                         .HasColumnType("int");
 
-                    b.Property<string>("VerificationCode")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("imageBike")
                         .HasColumnType("nvarchar(max)");
 
