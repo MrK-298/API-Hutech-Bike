@@ -1,0 +1,55 @@
+
+<!-- Rest of your HTML -->
+
+<div class="card-body">
+    <table class="table table-bordered" id="tripTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên khách hàng</th>
+                <th>Thời gian đặt</th>
+                <th>Giá</th>
+            </tr>
+        </thead>
+        <tbody id="tripTableBody">
+            <!-- Data rows will be added here dynamically -->
+        </tbody>
+    </table>
+    <!-- Pagination can also be handled dynamically if needed -->
+</div>
+
+<!-- Rest of your HTML -->
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchTrips();
+        });
+
+        function fetchTrips() {
+            fetch('https://localhost:7145/api/BookingDriver') // Adjust the API URL
+            
+                .then(response => response.json())
+                .then(data => renderTrips(data))
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function renderTrips(trips) {
+            const tbody = document.getElementById('tripTableBody');
+            tbody.innerHTML = ''; // Clear existing content
+
+            trips.forEach(trip => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${trip.id}</td>
+                    <td>${trip.fullName}</td>
+                    <td>${trip.timeBook}</td>
+                    <td>${trip.price}</td>
+                    <!-- Add more columns as needed -->
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    </script>
+
+    <!-- Other scripts -->

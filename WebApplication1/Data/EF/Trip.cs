@@ -12,6 +12,7 @@ namespace WebApplication1.Data.EF
 
             public int UserId { get; set; }
 
+
             public string startLocation { get; set; }
 
             public string endLocation { get; set; }
