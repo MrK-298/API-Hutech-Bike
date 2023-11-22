@@ -38,5 +38,16 @@ namespace WebApplication1.Controllers
             }
             return BadRequest("Booking failed");
         }
+        [HttpGet("GetTrip")]
+        public IActionResult GetTrip(int id)
+        {
+            var trip = _context.Trips.SingleOrDefault(p=>p.Id == id);
+            if (trip == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(trip);
+        }
     }
 }

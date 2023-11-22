@@ -20,9 +20,9 @@ namespace WebApplication1.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly UserRepository _userRepository;
         private readonly MyDbContext _context;
         private readonly SymmetricSecurityKey _secretKey;
+        private readonly UserRepository _userRepository;
 
         public AuthController(MyDbContext context, UserRepository userRepository)
         {
@@ -30,6 +30,7 @@ namespace WebApplication1.Controllers
             _secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ntqbqhrychczumzisfmojgjtpvpsfgwm"));
             _userRepository = userRepository;
         }
+
 
         [HttpPost("Login")]
         public IActionResult Login(LoginViewModel model)
@@ -153,7 +154,52 @@ namespace WebApplication1.Controllers
             // Đổi mật khẩu thành công
             return Ok();
         }
+        [HttpPost("DecodeToken")]
+        public IActionResult DecodeToken(string token)
+        {
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = Encoding.ASCII.GetBytes("ntqbqhrychczumzisfmojgjtpvpsfgwm");
 
+                var tokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidIssuer = "https://localhost:7145/swagger",
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidAudience = "api",
+                    ValidateLifetime = true, // Kiểm tra xem Token còn hiệu lực không
+                    ClockSkew = TimeSpan.Zero
+                };
+
+
+                var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var validatedToken);
+                var jwtToken = (JwtSecurityToken)validatedToken;
+
+                // Extract information from the token as needed
+                var username = jwtToken.Claims.First(x => x.Type == "Username").Value;
+                var userId = jwtToken.Claims.First(x => x.Type == "Id").Value;
+                var email = jwtToken.Claims.First(x => x.Type == "Email").Value;
+                var phoneNumber = jwtToken.Claims.First(x => x.Type == "PhoneNumber").Value;
+                var role = jwtToken.Claims.First(x => x.Type == "Role").Value;
+
+                return Ok(new
+                {
+                    Username = username,
+                    UserId = userId,
+                    Email = email,
+                    PhoneNumber = phoneNumber,
+                    Role = role
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return BadRequest(new { message = "Invalid token" });
+            }
+        }
 
     }
 }
